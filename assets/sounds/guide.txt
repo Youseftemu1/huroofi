@@ -1,0 +1,10 @@
+ou have two options:
+Use the default names:
+assets/sounds/letters/ج/letter.mp3
+assets/sounds/animals/ج/word.mp3
+assets/sounds/animal_sound_effect/ج/effect.mp3
+assets/sounds/object/ج/word.mp3
+assets/sounds/object_sound_effect/ج/effect.mp3
+assets/sounds/nature/ج/word.mp3
+assets/sounds/nature_sound_effect/ج/effect.mp3
+Any filename you like: thanks to the AssetResolver, the app scans each letter’s folder and plays the first audio file it finds (preferring names like letter, word, effect but falling back to whatever is there). So if you drop assets/sounds/animals/ج/camel_brief.m4a, it will be picked up automatically as long as it’s under the correct folder.
