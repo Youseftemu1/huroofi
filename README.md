@@ -1,12 +1,11 @@
 # Huroofi - Arabic Letters Learning App 🎨
 
-**Huroofi** (حروفي) is a beautiful, interactive Flutter app for teaching Arabic letters to children with drag-and-drop functionality, categories (Animals, Objects, Nature), and audio support.
+**Huroofi** (حروفي) is a beautiful, interactive Flutter app for teaching Arabic letters to children with categories (Animals, Objects, Nature), and audio support.
 
 ## Features
 
 ✅ **28 Arabic Letters** - Complete alphabet from ا to ي  
 ✅ **3 Categories** - Animals (حيوانات), Objects (أشياء), Nature (طبيعة)  
-✅ **Drag & Drop** - Interactive letter dragging  
 ✅ **Text-to-Speech** - Arabic pronunciation  
 ✅ **Animal Sounds** - Real animal sounds (when added)  
 ✅ **Beautiful Animations** - Smooth transitions and celebrations  
