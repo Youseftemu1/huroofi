@@ -1,0 +1,6 @@
+Initial release of Huroofi
+- 28 Arabic letters with interactive learning
+- 3 categories: Animals, Objects, Nature
+- Text-to-speech support
+- Beautiful animations and RTL support
+

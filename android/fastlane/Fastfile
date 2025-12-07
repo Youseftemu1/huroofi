@@ -1,0 +1,19 @@
+# Fastlane configuration for Huroofi
+# This helps F-Droid manage app metadata and screenshots
+
+default_platform(:android)
+
+platform :android do
+  desc "Update app metadata for F-Droid"
+  lane :metadata do
+    # This lane is used by F-Droid to update app descriptions
+    # F-Droid will use this to automatically update app metadata
+  end
+
+  desc "Generate screenshots"
+  lane :screenshots do
+    # Screenshots can be added here if needed
+    # F-Droid can use this to update app screenshots
+  end
+end
+
