@@ -1,5 +1,6 @@
 # Fastlane configuration for Huroofi
 # This helps F-Droid manage app metadata and screenshots
+# Updated: 2025-01-07 - Fastlane structure verified
 
 default_platform(:android)
 
