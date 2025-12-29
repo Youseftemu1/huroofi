@@ -70,8 +70,26 @@ class LetterData {
 
   static String? _imagePath(Category category, String letter) {
     final folder = _imageFolders[category]!;
-    return AssetResolver.resolveImageFromFolder(folder, letter) ??
-        'assets/images/$folder/$letter/image.jpg';
+    final prefix = 'assets/images/$folder/$letter/';
+    
+    // First try the resolver (works if manifest loaded)
+    final resolved = AssetResolver.resolveImageFromFolder(folder, letter);
+    if (resolved != null && AssetResolver.assetExists(resolved)) {
+      debugPrint('letter_data: ✅ Using resolved path: $resolved');
+      return resolved;
+    }
+    
+    // If resolver found a path but assetExists failed, still return it
+    // (might be a timing issue or the widget will handle it)
+    if (resolved != null) {
+      debugPrint('letter_data: ⚠️ Resolver returned path but assetExists failed: $resolved');
+      return resolved;
+    }
+    
+    // If manifest didn't load, return a path WITHOUT extension
+    // The _MultiFormatImage widget will try: .webp, .jfif, .png, .jpg, .jpeg, .bmp
+    debugPrint('letter_data: ⚠️ No resolved path, using fallback: ${prefix}image');
+    return '${prefix}image'; // Widget will try all formats automatically
   }
 
   static String? _wordSoundPath(Category category, String letter) {
@@ -139,7 +157,7 @@ class LetterData {
   static const List<List<String>> _objectEntries = [
     ['أ', 'ألوان', '🎨'],
     ['ب', 'بيت', '🏠'],
-    ['ت', 'تابوت', '⚰️'],
+    ['ت', 'تلفاز', '📺'],
     ['ث', 'ثوب', '👕'],
     ['ج', 'جدار', '🧱'],
     ['ح', 'حقيبة', '🎒'],

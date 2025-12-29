@@ -1,0 +1,14 @@
+What's New in Version 1.0.0:
+
+🎉 Initial Release of Huroofi!
+
+✨ Features:
+• Learn 28 Arabic letters (ا to ي) through interactive gameplay
+• Three exciting categories: Animals (حيوانات), Objects (أشياء), and Nature (طبيعة)
+• Text-to-speech pronunciation for each letter
+• Beautiful animations and colorful design
+• Full RTL (Right-to-Left) support for Arabic
+• Responsive design that works on phones and tablets
+
+Perfect for children learning Arabic letters in a fun and engaging way!
+

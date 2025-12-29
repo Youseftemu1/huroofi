@@ -1,0 +1,12 @@
+Huroofi (حروفي) is an educational app for teaching Arabic letters to children. It features interactive drag-and-drop functionality, multiple categories (Animals, Objects, Nature), text-to-speech, and audio support.
+
+Features:
+• 28 Arabic letters (ا to ي)
+• 3 categories: Animals, Objects, Nature
+• Interactive drag-and-drop
+• Text-to-speech for Arabic pronunciation
+• Beautiful animations and responsive design
+• RTL (Right-to-Left) support
+
+Perfect for children learning Arabic letters in a fun and interactive way!
+

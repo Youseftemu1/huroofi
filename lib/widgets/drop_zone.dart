@@ -231,19 +231,21 @@ class _DropZoneState extends State<DropZone> {
         final bool hasItem = letterItem != null;
         final double height = constraints.maxHeight;
 
+        // Better scaling based on available height
+        // Use a smaller percentage of height to prevent content from being too large
         final double letterFont =
-            math.min(ui.font(104), (height * 0.3).clamp(80.0, 132.0));
+            math.min(ui.font(104), (height * 0.25).clamp(70.0, 110.0));
         final double imageSize = hasItem
-            ? math.min(ui.size(150), (height * 0.32).clamp(120.0, 170.0))
+            ? math.min(ui.size(150), (height * 0.28).clamp(100.0, 150.0))
             : 0.0;
 
         Widget letterSection = SizedBox(
-          height: letterFont + ui.spacing(15),
+          height: letterFont + ui.spacing(16),
           child: Stack(
             clipBehavior: Clip.none,
       children: [
               Positioned(
-                top: -ui.spacing(-18),
+                top: 0,
                 left: 0,
                 right: 0,
                 child: GestureDetector(
@@ -255,7 +257,7 @@ class _DropZoneState extends State<DropZone> {
             letter,
                     textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 100,
+              fontSize: letterFont,
                       fontFamily: 'ArialKids',
               fontWeight: FontWeight.bold,
                       color: Colors.red,
@@ -331,22 +333,10 @@ class _DropZoneState extends State<DropZone> {
                             24 - imageBorderWidth * 1.2,
                           ),
                           child: letterItem.imagePath != null
-                              ? Image.asset(
-                                  letterItem.imagePath!,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    debugPrint(
-                                      'Image file not found: ${letterItem.imagePath} → $error',
-                                    );
-                                    return Center(
-                                      child: Text(
-                                        letterItem.emoji,
-                                        style: TextStyle(fontSize: ui.font(78)),
-                                      ),
-                                    );
-                                  },
+                              ? _MultiFormatImage(
+                                  basePath: letterItem.imagePath!,
+                                  emoji: letterItem.emoji,
+                                  fontSize: ui.font(78),
                                 )
                               : Center(
                                   child: Text(
@@ -382,7 +372,7 @@ class _DropZoneState extends State<DropZone> {
             child: Text(
               '$letter - ${letterItem.name}',
             style: TextStyle(
-                fontSize: ui.font(54) * (height < 520 ? 0.95 : 1.05),
+                fontSize: math.min(ui.font(54), (height * 0.12).clamp(32.0, 48.0)),
                 fontWeight: FontWeight.w900,
               color: Colors.grey.shade800,
                 letterSpacing: 1.5,
@@ -395,9 +385,9 @@ class _DropZoneState extends State<DropZone> {
         return Column(
           children: [
             letterSection,
-            SizedBox(height: ui.spacing(16)),
-            imageSection,
             SizedBox(height: ui.spacing(12)),
+            imageSection,
+            SizedBox(height: ui.spacing(10)),
             textSection,
             const Spacer(),
           ],
@@ -582,6 +572,113 @@ class _BurstParticle {
   final double rotation;
 
   const _BurstParticle(this.emoji, this.offset, this.rotation);
+}
+
+/// Widget that tries multiple image formats if the first one fails
+class _MultiFormatImage extends StatefulWidget {
+  final String basePath;
+  final String emoji;
+  final double fontSize;
+
+  const _MultiFormatImage({
+    required this.basePath,
+    required this.emoji,
+    required this.fontSize,
+  });
+
+  @override
+  State<_MultiFormatImage> createState() => _MultiFormatImageState();
+}
+
+class _MultiFormatImageState extends State<_MultiFormatImage> {
+  static const List<String> _extensions = ['.webp', '.jfif', '.png', '.jpg', '.jpeg', '.bmp'];
+  int _currentIndex = 0; // Start with first extension
+
+  String _getCurrentPath() {
+    // Extract base path without extension
+    final basePath = widget.basePath;
+    
+    // If path already has an extension and we're on index 0, try it first
+    // (AssetResolver might have found the correct file)
+    final lastDot = basePath.lastIndexOf('.');
+    final lastSlash = basePath.lastIndexOf('/');
+    final hasExtension = lastDot > lastSlash; // Extension exists after the last slash
+    
+    if (hasExtension && _currentIndex == 0) {
+      // First try the exact path that AssetResolver returned
+      debugPrint('_MultiFormatImage: Trying exact resolved path first: $basePath');
+      return basePath;
+    }
+    
+    // Extract path without extension for trying other formats
+    final pathWithoutExt = hasExtension && lastDot > 0 
+        ? basePath.substring(0, lastDot)
+        : basePath;
+    
+    // Try extensions in order (skip index 0 if we already tried the exact path)
+    final effectiveIndex = hasExtension ? _currentIndex - 1 : _currentIndex;
+    if (effectiveIndex >= 0 && effectiveIndex < _extensions.length) {
+      return '$pathWithoutExt${_extensions[effectiveIndex]}';
+    }
+    return basePath; // Return original if all tried
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentPath = _getCurrentPath();
+    
+    // Debug: log what we're trying (only first time)
+    if (_currentIndex == 0) {
+      debugPrint('_MultiFormatImage: Trying path: $currentPath (base: ${widget.basePath})');
+    }
+    
+    return Image.asset(
+      currentPath,
+      width: double.infinity,
+      height: double.infinity,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        debugPrint('_MultiFormatImage: Failed to load $currentPath (index $_currentIndex/${_extensions.length - 1})');
+        
+        // Try next format
+        // Calculate max index: if basePath has extension, we need to try all extensions + 1
+        final basePath = widget.basePath;
+        final lastDot = basePath.lastIndexOf('.');
+        final lastSlash = basePath.lastIndexOf('/');
+        final hasExtension = lastDot > lastSlash;
+        final maxIndex = hasExtension ? _extensions.length : _extensions.length - 1;
+        
+        if (_currentIndex < maxIndex) {
+          // Schedule state update for next format
+          Future.microtask(() {
+            if (mounted) {
+              setState(() {
+                _currentIndex++;
+                final nextPath = _getCurrentPath();
+                debugPrint('_MultiFormatImage: Now trying index $_currentIndex: $nextPath');
+              });
+            }
+          });
+          // Show emoji while trying next format
+          return Center(
+            child: Text(
+              widget.emoji,
+              style: TextStyle(fontSize: widget.fontSize),
+            ),
+          );
+        }
+        
+        // All formats failed, show emoji
+        debugPrint('_MultiFormatImage: All formats failed for base path: ${widget.basePath}');
+        return Center(
+          child: Text(
+            widget.emoji,
+            style: TextStyle(fontSize: widget.fontSize),
+          ),
+        );
+      },
+    );
+  }
 }
 
 class AnimatedRainbowBorder extends StatefulWidget {

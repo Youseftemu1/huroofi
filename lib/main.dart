@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:math' as math;
+import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'models/letter_item.dart';
@@ -12,8 +14,42 @@ import 'widgets/animated_rainbow_background.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await AssetResolver.init();
-  await AudioService.initialize();
+  
+  // Set up error handling for release builds
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    if (kDebugMode) {
+      debugPrint('FlutterError: ${details.exception}');
+      debugPrint('Stack trace: ${details.stack}');
+    }
+  };
+  
+  // Handle platform errors
+  PlatformDispatcher.instance.onError = (error, stack) {
+    if (kDebugMode) {
+      debugPrint('Platform error: $error');
+      debugPrint('Stack trace: $stack');
+    }
+    return true;
+  };
+  
+  // Initialize services with error handling
+  try {
+    await AssetResolver.init();
+  } catch (e, stackTrace) {
+    debugPrint('Error initializing AssetResolver: $e');
+    debugPrint('Stack trace: $stackTrace');
+    // Continue anyway - app can still work with fallbacks
+  }
+  
+  try {
+    await AudioService.initialize();
+  } catch (e, stackTrace) {
+    debugPrint('Error initializing AudioService: $e');
+    debugPrint('Stack trace: $stackTrace');
+    // Continue anyway - TTS might still work
+  }
+  
   runApp(const MyApp());
 }
 
@@ -234,8 +270,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final bool isLandscape = size.width > size.height;
-    final double dropZoneHeight =
-        isLandscape ? size.height * 0.6 : 500; // a bit shorter in landscape
+    final double screenHeight = size.height;
+    
+    // Calculate available height for content (excluding header, categories, letters)
+    final double headerHeight = isLandscape ? 0 : 120; // Approximate header height
+    final double categoryHeight = 60; // Approximate category selector height
+    final double letterRowHeight = math.min(100.0, screenHeight * 0.12); // Responsive letter row
+    final double spacing = isLandscape ? 24.0 : 32.0;
+    final double availableHeight = screenHeight - headerHeight - categoryHeight - letterRowHeight - spacing;
+    
+    // Make drop zone responsive - give more space but ensure content scales properly
+    final double dropZoneHeight = isLandscape 
+        ? math.min(size.height * 0.6, availableHeight)
+        : math.min(550.0, availableHeight * 0.70).clamp(350.0, 550.0);
 
     return Scaffold(
       body: AnimatedRainbowBackground(
@@ -295,8 +342,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 
                 // Letters Row (Horizontal Scrollable - Always Visible)
                 Container(
-                  height: 100,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  height: letterRowHeight,
+                  padding: EdgeInsets.symmetric(vertical: math.max(4, letterRowHeight * 0.08)),
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -305,7 +352,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           final letter = LetterData.letters[index];
                           final isSelected = _selectedLetter == letter;
                           return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            padding: EdgeInsets.symmetric(horizontal: math.max(4, letterRowHeight * 0.06)),
                             child: LetterTile(
                               letter: letter,
                               color: LetterData.letterColors[index],

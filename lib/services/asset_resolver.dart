@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -16,25 +14,54 @@ class AssetResolver {
   ];
 
   static const List<String> _imageExtensions = [
-    '.png',
-    '.jpg',
-    '.jpeg',
-    '.webp',
-    '.bmp',
-    '.jfif',
+    '.webp',  // Preferred format (better compression)
+    '.jfif',  // Also check jfif
+    '.png',   // Then png
+    '.jpg',   // Then jpg
+    '.jpeg',  // Then jpeg
+    '.bmp',   // Last resort
   ];
 
   static Future<void> init() async {
     if (_initialized) return;
-    final manifestContent = await rootBundle.loadString('AssetManifest.json');
-    final Map<String, dynamic> manifestMap = json.decode(manifestContent);
-    _assets
-      ..clear()
-      ..addAll(manifestMap.keys.cast<String>());
-    _assetSet
-      ..clear()
-      ..addAll(_assets);
-    _initialized = true;
+    
+    try {
+      // Use the new AssetManifest API (Flutter deprecated AssetManifest.json)
+      final assetManifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+      final assetList = assetManifest.listAssets();
+      
+      _assets
+        ..clear()
+        ..addAll(assetList);
+      _assetSet
+        ..clear()
+        ..addAll(_assets);
+      _initialized = true;
+      
+      // Log image format counts to verify files are in manifest
+      final imageCount = _assets.where((a) => a.contains('/images/')).length;
+      final jpgCount = _assets.where((a) => a.contains('/images/') && a.toLowerCase().endsWith('.jpg')).length;
+      final jfifCount = _assets.where((a) => a.contains('/images/') && a.toLowerCase().endsWith('.jfif')).length;
+      final webpCount = _assets.where((a) => a.contains('/images/') && a.toLowerCase().endsWith('.webp')).length;
+      
+      debugPrint('AssetResolver: ✅ Initialized! Loaded ${_assets.length} total assets ($imageCount images)');
+      debugPrint('AssetResolver: Image formats - JPG: $jpgCount, JFIF: $jfifCount, WEBP: $webpCount');
+      
+      // Show sample nature folder files to verify they're included
+      final natureFiles = _assets
+          .where((a) => a.contains('/images/nature/'))
+          .take(5)
+          .toList();
+      if (natureFiles.isNotEmpty) {
+        debugPrint('AssetResolver: Sample nature images: $natureFiles');
+      }
+    } catch (e) {
+      debugPrint('AssetResolver: ❌ Error loading AssetManifest: $e');
+      // Initialize with empty list to prevent crashes
+      _assets.clear();
+      _assetSet.clear();
+      _initialized = true; // Mark as initialized to prevent retry loops
+    }
   }
 
   static String? resolveLetterSoundPath(String letter) {
@@ -49,26 +76,45 @@ class AssetResolver {
   static String? resolveImageFromFolder(String folder, String letter) {
     _ensureInitialized();
     final prefix = 'assets/images/$folder/$letter/';
-    final result = _resolveFromFolder(
-      prefix,
-      preferredNames: const ['image'],
-      extensions: _imageExtensions,
-    );
     
-    // Debug: show what files are available in this folder
-    if (result == null) {
+    // If manifest loaded successfully, use it
+    if (_assets.isNotEmpty) {
+      // First, check what files actually exist in this folder
       final availableFiles = _assets
           .where((asset) => asset.startsWith(prefix))
           .toList();
-      if (availableFiles.isNotEmpty) {
-        debugPrint(
-          'AssetResolver: No image found with preferred name "image" in $prefix, '
-          'but found these files: $availableFiles',
-        );
+      
+      if (availableFiles.isEmpty) {
+        debugPrint('AssetResolver: ❌ No files found in $prefix at all!');
+        debugPrint('AssetResolver: Available folders: ${_assets.where((a) => a.startsWith("assets/images/$folder/")).take(5).toList()}');
+      } else {
+        debugPrint('AssetResolver: 📁 Files in $prefix: $availableFiles');
+      }
+      
+      final result = _resolveFromFolder(
+        prefix,
+        preferredNames: const ['image'],
+        extensions: _imageExtensions,
+      );
+      
+      if (result != null) {
+        debugPrint('AssetResolver: ✅ Found image for $folder/$letter: $result');
+        // Verify it exists
+        if (_assetSet.contains(result)) {
+          debugPrint('AssetResolver: ✅ Verified $result exists in manifest');
+          return result;
+        } else {
+          debugPrint('AssetResolver: ❌ $result NOT in manifest!');
+        }
+      } else {
+        debugPrint('AssetResolver: ⚠️ No "image.*" found in $prefix');
       }
     }
     
-    return result;
+    // Fallback: if manifest failed or empty, return path with preferred extension
+    // The widget will try multiple formats
+    debugPrint('AssetResolver: ⚠️ Using fallback path for $folder/$letter: ${prefix}image');
+    return '${prefix}image'; // No extension - widget will try all formats
   }
 
   static String? resolveWordSoundFromFolder(String folder, String letter) {
@@ -106,15 +152,29 @@ class AssetResolver {
       }
     }
 
-    for (final asset in _assets) {
-      if (!asset.startsWith(prefix)) continue;
-      for (final ext in extensions) {
-        if (asset.toLowerCase().endsWith(ext)) {
+    // Fallback: find any file in the folder with matching extension
+    // Check extensions in priority order
+    for (final ext in extensions) {
+      final lowerExt = ext.toLowerCase();
+      for (final asset in _assets) {
+        if (!asset.startsWith(prefix)) continue;
+        final lowerAsset = asset.toLowerCase();
+        if (lowerAsset.endsWith(lowerExt)) {
           return asset;
         }
       }
     }
     return null;
+  }
+
+  static bool assetExists(String path) {
+    _ensureInitialized();
+    return _assetSet.contains(path);
+  }
+
+  static List<String> getAssetsInFolder(String prefix) {
+    _ensureInitialized();
+    return _assets.where((asset) => asset.startsWith(prefix)).toList();
   }
 
   static void _ensureInitialized() {

@@ -1,0 +1,6 @@
+# Appfile for F-Droid
+# This file is used by Fastlane to manage app metadata
+
+json_key_file("") # Not needed for F-Droid
+package_name("com.huroofi.app")
+

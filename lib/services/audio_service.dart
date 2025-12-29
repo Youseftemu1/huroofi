@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:audioplayers/audioplayers.dart';
 
@@ -7,10 +8,24 @@ class AudioService {
   static final AudioPlayer _audioPlayer = AudioPlayer();
   
   static Future<void> initialize() async {
-    await _tts.setLanguage("ar-SA");
-    await _tts.setSpeechRate(0.8);
-    await _tts.setPitch(1.0);
-    await _tts.setVolume(1.0);
+    try {
+      // Try to set Arabic language, fallback to default if not available
+      final languages = await _tts.getLanguages;
+      if (languages.contains("ar-SA")) {
+        await _tts.setLanguage("ar-SA");
+      } else if (languages.contains("ar")) {
+        await _tts.setLanguage("ar");
+      } else {
+        // Use default language if Arabic is not available
+        debugPrint('Arabic TTS not available, using default language');
+      }
+      await _tts.setSpeechRate(0.8);
+      await _tts.setPitch(1.0);
+      await _tts.setVolume(1.0);
+    } catch (e) {
+      debugPrint('Error initializing TTS: $e');
+      // Continue anyway - TTS might still work with defaults
+    }
   }
 
   static Future<void> speakLetter(String letterName) async {

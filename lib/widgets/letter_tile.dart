@@ -25,8 +25,18 @@ class LetterTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = UiScale.of(context);
-    final double tileSize = ui.size(96);
-    final double fontSize = ui.font(44);
+    final mediaQuery = MediaQuery.of(context);
+    final screenHeight = mediaQuery.size.height;
+    final screenWidth = mediaQuery.size.width;
+    
+    // Calculate tile size based on available space and screen dimensions
+    // Limit tile size to prevent it from being too large on certain devices
+    final double baseTileSize = ui.size(96);
+    final double maxTileSize = math.min(screenWidth * 0.15, screenHeight * 0.12);
+    final double tileSize = math.min(baseTileSize, maxTileSize).clamp(70.0, 96.0);
+    
+    // Scale font size proportionally to tile size
+    final double fontSize = (tileSize / 96) * ui.font(44);
     final double tileSpacing = ui.spacing(12);
 
     final tileWidget = AnimatedContainer(
